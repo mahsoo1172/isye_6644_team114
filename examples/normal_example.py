@@ -1,0 +1,1 @@
+from ranking_selection_procedures.normal import single_stage
