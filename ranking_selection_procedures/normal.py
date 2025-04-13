@@ -48,53 +48,69 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
     Selection in Simulation"
 
     Assumptions:
-    1. c=1, 'typically the best choice in Kin&Nelson procedure'
-    2. in this version, the variances are only calculated one time, during the initialization phase.
+    1. Set the constant 'c', to c=1. This is typically the best choice as stated in the Kim & Nelson paper.
+    2. In this procedure, the variances are only estimated a single time, during the 'initialization' phase of the
+       procedure.
+    3. This code assumes that you have the same number of samples from each system.
+
     Parameters:
-    parameter1 (type): Description of the first parameter.
-    parameter2 (type): Description of the second parameter.
+    input_system_samples (list): List of samples from each system you want to rank & select. Size is [k x M] where k is
+                                 the # of systems, and M is the # of samples from each system.
+    alpha (float): confidence interval parameter
+    indifference_zone (float): the smallest difference between the means of the systems that you deem important to
+                               detect.
+    n0 (int): first stage sample size - # of samples to use in 'initialization' phase to estimate the variance of
+              each distribution.
 
     Returns:
-    return_type: Description of the return value.
+    best_input_system_index (int): Index of the best system from the original 'input_system_samples' system list
+    number_of_samples_necessary (int): Number of samples (final value of r) used in the procedure.
     """
-    #n0 = first stage sample size
-    # Setup Stage
-    max_num_input_samples = len(input_system_samples[0])
-    #Initialization
-    # Calculating 'eta' constant
-    c = 1
+
+
+    # Initializing input constants
+    max_num_input_samples = len(input_system_samples[0])  # total number of samples from each input system
     I = list(range(len(input_system_samples)))  # I is the indices of the original input systems
-    print('I:' , I)
-    k = len(I)
+
+    # First Stage: Initialization Phase ################################################################################
+    # Purpose: Calculating the 'sample variance of the difference btwn systems i and l' to use in the screening phase. #
+
+    # Calculating 'eta' and h^2
+    c = 1       # 'c' constant in the Kim & Nelson procedure. Assumed c = 1
+    k = len(I)  # number of systems to test
     eta_intermediate_term = ((2*alpha) / (k-1))**(-2/(n0-1))
     eta = (1/2) * (eta_intermediate_term - 1)
     h2 = 2 * c * eta * (n0 - 1)
-    r = 0 # observation counter
+
     # Calculating sample variance of the difference between systems i and l
-    system_diff_sample_variance = 0  # (S_ij)^2
     N_il_list = []
-    S_il2_array = np.zeros((k, k))  # the [i, i] diagonal terms won't be used.
+    S_il2_array = np.zeros((k, k))  # array to store sample variance terms, S_il2. The [i, i] diagonal terms
+                                    # won't be used.
+
+    # Iterate through each combination of the input systems, indices i & l.
     for i in range(0, k):
         for l in range(0, k):
-            if l != i:
-                system_diff_sample_variance = 0
-                for j in range(0, n0): # iterate through all samples up to n0
-                    sample_diff = input_system_samples[i][j] - input_system_samples[l][j]
+            if l != i:   # When i != l, you are comparing two different systems. Calculate the S_il2 term:
+                         # S_il2 = the sample variance of the difference between systems i and l.
+                system_diff_sample_variance = 0  # initializing(S_il)^2
+
+                for j in range(0, n0):  # iterate through all samples up to n0. n0 is the first-stage sample size
+                                        # set by the user.
+                    sample_diff = input_system_samples[i][j] - input_system_samples[l][j]  # X_ij - X_il
+
+                    # Xbar_i(n0) - Xbar_l(n0)
                     mean_diff = np.mean(input_system_samples[i][0:n0]) - np.mean(input_system_samples[l][0:n0])
                     system_diff_term = (sample_diff - mean_diff)**2
                     system_diff_sample_variance += system_diff_term
 
-                S_il2_array[i][l] = system_diff_sample_variance  # store the sample variance of system diff to use in
-                                                                 # screening phase
+                S_il2_term = 1/(n0-1) * system_diff_sample_variance
+                S_il2_array[i][l] = S_il2_term  # store the sample variance of system diff to use in screening phase
 
-            N_il = int(h2*system_diff_sample_variance / indifference_zone**2)
-            N_il_list.append(N_il)
+                N_il = int(h2*system_diff_sample_variance / indifference_zone**2)
+                N_il_list.append(N_il)
 
     Ni = max(N_il_list)
-    # print(Ni)
-    # print(S_il2_array)
-    # Screening: Check if the sample mean of system 'i' is >= to (sample mean of 'l' - W_il)
-    # Special case 1:
+    # Initialization Special End Case:
     number_of_samples_necessary = 0
     if n0 > (Ni + 1):
         print('Early Initialization Stoppping Rule ( n0 > (Ni+1) )')
@@ -105,33 +121,42 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
             if sample_mean > best_sample_mean:
                 best_input_system_index = i
         print('best system:', best_input_system_index)
-
+    # Second Stage: Screening Phase ####################################################################################
+    # Purpose: Remove systems based on Sample Mean - W_il checks #######################################################
     else:
-        r = n0
+        r = n0  # r is the current # of samples used from each input system in the screening process.
         best_found = False
+        # Continue the screening process until best_found == True, or r > max_num_input_samples.
+        # the r > max_num_input_samples case is handled further below.
         while not best_found:
-            # print("I:", I)
-            k_iter = len(I)
-            systems_to_remove = []
-            for i in range(0, k_iter):
+            k_iter = len(I)  # current # of systems remaining
+            systems_to_remove = []  # check if systems need to be removed
+
+            # Screening loop: Between each combination of system 'i' and 'l', calculate sample mean Xbar_i, Xbar_l, and
+            # the W_il term.
+            # Removal rule: Remove system 'i' if Xbar_i < (Xbar_l - W_il) for any system 'l'.
+            # If there is more than 1 system remaining at the end of the loop, add in one additional sample r+=1 and
+            # repeat the Xbar_i < (Xbar_l - W_il) check until 1 system remains.
+
+            for i in range(0, k_iter): # iterate through all systems 'i' and 'l'
                 sys_i = I[i]
-                sample_mean_X_i = np.mean(input_system_samples[sys_i][0:r])
+                sample_mean_X_i = np.mean(input_system_samples[sys_i][0:r])  # calc Xbar_i up to 'r' samples
                 for l in range(0, k_iter):
                     if l != i:
                         sys_l = I[l]
-                        sample_mean_X_l = np.mean(input_system_samples[sys_l][0:r])
+                        sample_mean_X_l = np.mean(input_system_samples[sys_l][0:r])  # calc Xbar_l  up to 'r' samples
+                        # W_il calc
                         W_il = indifference_zone/(2*c*r) * ((h2*S_il2_array[sys_i][sys_l]/(indifference_zone**2)) - r)
                         W_il = max(0, W_il)
-                        # print('meanX_i', sample_mean_X_i)
-                        # print('meanX_l - W_il', (sample_mean_X_l - W_il))
+
                         if sample_mean_X_i < (sample_mean_X_l - W_il):
-                            if sys_i not in systems_to_remove:  # only add to removal list
-                                                                # if sys_i not already found.
-                                                                # Could possibly be found in a previous W_il check
+                            if sys_i not in systems_to_remove:  # only add to removal list if sys_i not already found.
+                                                                # Prevents duplicates from being added to removal list.
                                 systems_to_remove.append(sys_i)
                                 print('remove system:', sys_i)
                                 print('r', r)
-            if len(systems_to_remove) > 0:
+
+            if len(systems_to_remove) > 0:  # If systems_to_remove list is not empty, then remove systems from I.
                 for bad_sys in systems_to_remove:
                     I.remove(bad_sys)
                     print('I:', I)
@@ -139,18 +164,20 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
             if len(I) == 1:
                 best_found = True
             r = r+1
-
-            # Screening Special Case:
+            # Screening Special Case: r >= max_num_input_samples
+            # If you run out of samples, determine best system by which one has the highest sample mean from the
+            # list of remaining systems at this point in the procedure.
             if r == max_num_input_samples:
                 print('Screening early stopping case: exceeded max # of samples available')
                 best_input_system_index = -1
                 best_sample_mean = 0
-                for i in range(0, k):
-                    sample_mean = np.mean(input_system_samples[i])
+                for i in range(0, len(I)):
+                    sys_index = I[i]
+                    sample_mean = np.mean(input_system_samples[sys_index])
                     print('sample_mean', sample_mean)
                     if sample_mean > best_sample_mean:
                         best_sample_mean = sample_mean
-                        best_input_system_index = i
+                        best_input_system_index = sys_index
                 print('best system:', best_input_system_index)
                 print('num samples needed:', r)
                 return best_input_system_index, number_of_samples_necessary
@@ -159,6 +186,7 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
         number_of_samples_necessary = r
         print('best system:', best_input_system_index)
         print('num samples needed:', r)
+        
     return best_input_system_index, number_of_samples_necessary
 
 def generate_normal_distrib_samples(num_distributions, num_samples,
