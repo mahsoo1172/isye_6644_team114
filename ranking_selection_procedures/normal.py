@@ -43,12 +43,12 @@ def single_stage(input_system_samples, alpha, delta_star):
     best_sample_mean = 0
     for i in range(0, num_systems):
         sample_mean = np.mean(input_system_samples[i][0: number_of_samples_necessary])
-        print('sample_mean', sample_mean)
+        # print('sample_mean', sample_mean)
         if sample_mean > best_sample_mean:
             best_sample_mean = sample_mean
             best_input_system_index = i
-    print('best system:', best_input_system_index)
-    print('required # of input samples:', number_of_samples_necessary)
+    # print('best system:', best_input_system_index)
+    # print('required # of input samples:', number_of_samples_necessary)
     return best_input_system_index, number_of_samples_necessary
 
 def sequential(input_system_samples, alpha, indifference_zone, n0):
@@ -77,7 +77,7 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
     number_of_samples_necessary (int): Number of samples (final value of r) used in the procedure.
     """
 
-
+    print('# # # # # # Sequential removal process currently running: # # # # # # ')
     # Initializing input constants
     max_num_input_samples = len(input_system_samples[0])  # total number of samples from each input system
     I = list(range(len(input_system_samples)))  # I is the indices of the original input systems
@@ -130,7 +130,7 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
             sample_mean = np.mean(input_system_samples[i])
             if sample_mean > best_sample_mean:
                 best_input_system_index = i
-        print('best system:', best_input_system_index)
+        # print('best system:', best_input_system_index)
     # Second Stage: Screening Phase ####################################################################################
     # Purpose: Remove systems based on Sample Mean - W_il checks #######################################################
     else:
@@ -164,12 +164,12 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
                                                                 # Prevents duplicates from being added to removal list.
                                 systems_to_remove.append(sys_i)
                                 print('remove system:', sys_i)
-                                print('r', r)
+                                # print('r', r)
 
             if len(systems_to_remove) > 0:  # If systems_to_remove list is not empty, then remove systems from I.
                 for bad_sys in systems_to_remove:
                     I.remove(bad_sys)
-                    print('I:', I)
+                    # print('I:', I)
 
             if len(I) == 1:
                 best_found = True
@@ -184,18 +184,18 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
                 for i in range(0, len(I)):
                     sys_index = I[i]
                     sample_mean = np.mean(input_system_samples[sys_index])
-                    print('sample_mean', sample_mean)
+                    # print('sample_mean', sample_mean)
                     if sample_mean > best_sample_mean:
                         best_sample_mean = sample_mean
                         best_input_system_index = sys_index
-                print('best system:', best_input_system_index)
-                print('num samples needed:', r)
+                # print('best system:', best_input_system_index)
+                # print('num samples needed:', r)
                 return best_input_system_index, number_of_samples_necessary
-
+        print('# # # # # # Sequential removal process complete. # # # # # # # # # # ')
         best_input_system_index =I[0]
         number_of_samples_necessary = r
-        print('best system:', best_input_system_index)
-        print('num samples needed:', r)
+        # print('best system:', best_input_system_index)
+        # print('num samples needed:', r)
 
     return best_input_system_index, number_of_samples_necessary
 
