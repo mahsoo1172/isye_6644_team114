@@ -1,45 +1,55 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-# TODO: implement single stage lookup table (or just direct calculation)
-def single_stage(input_system_samples, alpha, indifference_zone):
+def single_stage(input_system_samples, alpha, delta_star):
     """
     Single-stage selection procedure to select the normal distribution with the highest mean.
     Based on Bechofer's 1954 paper: "A Single-Sample Multiple Decision Procedure for Ranking
     Means of Normal Populations with known Variances"
 
     Assumptions:
-    1. Variances are both known and the same across the different distributions.
+    1. Variances are both known and the same across the different distributions that you're comparing.
+    2. Due to the table lookup method, the inputted combination of # of input distributions, P*, and the delta_star
+       must be in the lookup table.
 
     Parameters:
-    parameter1 (type): Description of the first parameter.
-    parameter2 (type): Description of the second parameter.
-
+    input_system_samples (list): Description of the first parameter.
+    alpha (float): Description of the second parameter.
+    delta_star (float): The indifference zone / standard deviation. Indifference zone represented in terms of
+                        standard deviations. The indifference zone is the smallest difference between the means of the
+                        systems that you deem important to detect.
     Returns:
-    return_type: Description of the return value.
+    best_input_system_index (int): Index of the best system from the original 'input_system_samples' system list
+    number_of_samples_necessary (int): Number of samples (final value of r) used in the procedure.
     """
-    lookup_table = pd.read_csv('../ranking_selection_procedures/normal_single_stage_table.csv')
+    csv_filepath = Path(__file__).parent  # generalized way to get filepath of the lookup table csv. The csv will
+                                          # be in the same directory as the procedure code.
+    lookup_table = pd.read_csv(csv_filepath / 'normal_single_stage_table.csv')
+
     num_systems = len(input_system_samples)
-    required_n = -1
+    number_of_samples_necessary = -1
     try:
-        required_n = lookup_table.loc[(lookup_table['k'] == num_systems) &
-                                      (lookup_table['P*'] == (1-alpha))][str(indifference_zone)].iloc[0]
-        print(required_n)
+        number_of_samples_necessary = lookup_table.loc[(lookup_table['k'] == num_systems) &
+                                      (lookup_table['P*'] == (1-alpha))][str(delta_star)].iloc[0]
+
     except Exception as e:
         print("Lookup failed. Number of systems 'k' and 'P*' must be valid entries in the lookup table.")
+        print('Python Runtime Error: ', e)
         return
 
     print('Determining best system with single stage selection')
     best_input_system_index = -1
     best_sample_mean = 0
     for i in range(0, num_systems):
-        sample_mean = np.mean(input_system_samples[i][0: required_n])
+        sample_mean = np.mean(input_system_samples[i][0: number_of_samples_necessary])
         print('sample_mean', sample_mean)
         if sample_mean > best_sample_mean:
             best_sample_mean = sample_mean
             best_input_system_index = i
     print('best system:', best_input_system_index)
-    return best_input_system_index
+    print('required # of input samples:', number_of_samples_necessary)
+    return best_input_system_index, number_of_samples_necessary
 
 def sequential(input_system_samples, alpha, indifference_zone, n0):
     """
@@ -186,16 +196,15 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
         number_of_samples_necessary = r
         print('best system:', best_input_system_index)
         print('num samples needed:', r)
-        
+
     return best_input_system_index, number_of_samples_necessary
 
-def generate_normal_distrib_samples(num_distributions, num_samples,
-                                         common_variance_flag=False, common_variance_val=None,
-                                         randomized_mean_range=(0, 50),
-                                         randomized_variance_range=(0.1, 100),
-                                         random_seed=0,
-                                         rounding=None,
-                                         ):
+def generate_normal_distrib_samples(num_distributions, num_samples_to_generate,
+                                    randomized_mean_range=(0, 50),
+                                    randomized_variance_range=(0.1, 100),
+                                    random_seed=0,
+                                    rounding=None,
+                                    ):
     """
     Function to generate samples from multiple normal distributions. These samples are used test the single-stage
     and sequential R&S procedures. Normal distributions with a common variance can be set. Otherwise, both the
@@ -204,11 +213,22 @@ def generate_normal_distrib_samples(num_distributions, num_samples,
     Assumptions:
 
     Parameters:
-    parameter1 (type): Description of the first parameter.
-    parameter2 (type): Description of the second parameter.
+    num_distributions (int): Number of normal distributions to generate samples for. This represents the number of
+                             systems that you'd want to rank and select.
+    num_samples_to_generate (int): Number of random samples to generate from each distribution.
+    randomized_mean_range (tuple (float, float)): lower and upper range for uniform random selection of the normal
+                                                  distribution's mean
+    randomized_variance_range (tuple (float, float)): lower and upper range for uniform random selection of the normal
+                                                      distribution's variance
+    random_seed (int): Random seed to set for debugging/experiment replication purposes.
+    rounding (int): # of decimal places to truncate to. Used for cleaner print statements of the randomized
+                   distribution means and variances.
 
     Returns:
-    return_type: Description of the return value.
+    output_distribution_samples_list (list, int): List of size [num_distributions X num_samples_to_generate]
+    output_distribution_definition_list (list, tuple(float, float) ): List of size [num_distributions X 1]
+                                                                      Each tuple contains the mean and variance of the
+                                                                      distribution. Used for validating R&S results.
     """
     # Setting random seed for replicating results
     np.random.seed(random_seed)
@@ -230,7 +250,7 @@ def generate_normal_distrib_samples(num_distributions, num_samples,
             random_variance = round(random_variance, rounding)
         random_normal_samples = np.random.normal(loc=random_mean,
                                                  scale=np.sqrt(random_variance),
-                                                 size=num_samples)
+                                                 size=num_samples_to_generate)
         actual_distribution_def = {
             "mean": random_mean,
             "variance": random_variance,
