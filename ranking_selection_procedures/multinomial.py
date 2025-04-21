@@ -18,6 +18,7 @@ def example_format():
 import pickle
 import numpy as np
 from scipy.stats import multinomial
+from pathlib import Path
 
 
 def single_stage(k =  3, pstar = 0.75, thetastar = 1.4, n_reps=1, verbose=False, seed=None):
@@ -46,7 +47,9 @@ def single_stage(k =  3, pstar = 0.75, thetastar = 1.4, n_reps=1, verbose=False,
     rand_nums = rand_gen.random(size=k) #Can't use uniform because need to equal 1, would be same process
     probs = rand_nums / rand_nums.sum()
 
-    n_dict = pickle.load(open("n_dict.pickle", "rb"))
+
+    pkl_filepath = Path(__file__).parent
+    n_dict = pickle.load(open(pkl_filepath/"n_dict.pickle", "rb"))
     n = n_dict[(k, pstar, thetastar)]
     
     replications = rand_gen.multinomial(n, probs, size=n_reps)
@@ -98,7 +101,8 @@ def seq(k = 3, pstar = 0.75, thetastar = 1.4, curtail_only=False, verbose=False,
     rand_nums = rand_gen.random(size=k)
     probs = rand_nums / rand_nums.sum()
 
-    n0_dict = pickle.load(open("n0_dict.pickle", "rb"))
+    pkl_filepath = Path(__file__).parent
+    n0_dict = pickle.load(open(pkl_filepath/"n0_dict.pickle", "rb"))
     n_0 = n0_dict[(k, pstar, thetastar)]
     
     best_arr = np.zeros(shape=(n_0,k))
