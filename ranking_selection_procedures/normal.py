@@ -14,8 +14,9 @@ def single_stage(input_system_samples, alpha, delta_star):
        must be in the lookup table.
 
     Parameters:
-    input_system_samples (list): Description of the first parameter.
-    alpha (float): Description of the second parameter.
+    input_system_samples (list): List of samples from each system you want to rank & select. Size is [k x M] where k is
+                                 the # of systems, and M is the # of samples from each system.
+    alpha (float): significance level
     delta_star (float): The indifference zone / standard deviation. Indifference zone represented in terms of
                         standard deviations. The indifference zone is the smallest difference between the means of the
                         systems that you deem important to detect.
@@ -66,7 +67,7 @@ def sequential(input_system_samples, alpha, indifference_zone, n0):
     Parameters:
     input_system_samples (list): List of samples from each system you want to rank & select. Size is [k x M] where k is
                                  the # of systems, and M is the # of samples from each system.
-    alpha (float): confidence interval parameter
+    alpha (float): significance level
     indifference_zone (float): the smallest difference between the means of the systems that you deem important to
                                detect.
     n0 (int): first stage sample size - # of samples to use in 'initialization' phase to estimate the variance of

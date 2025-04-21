@@ -4,7 +4,7 @@ from pathlib import Path
 # Steps to import properly across different environments.
 parent_dir_path = Path(__file__).resolve().parent.parent  # Get the abs path of the 'isye_6644_team114' parent dir.
 sys.path.append(str(parent_dir_path))  # add the parent path to the runtime path.
-from ranking_selection_procedures import rhinott_two_stage_procedure, kiefer_wolfowitz_sequential_procedure
+from ranking_selection_procedures.bernoulli import rhinott_two_stage_procedure, kiefer_wolfowitz_sequential_procedure
 
 # Two-Stage Bernoulli Example - Rinott's Procedure
 k = 4
