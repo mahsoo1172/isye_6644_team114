@@ -3,7 +3,7 @@
 
 ## Introduction:
 This repository contains functions to perform ranking and selection (R&S) procedures on Normal, Bernoulli, and Multinomial procedures.
-Examples of using each procedure are also provided. The library was created by Tabriz Bumpas, Chuck Cao, and Matthew Truong
+Examples of using each procedure are also provided. The library was created by Tabriz Bumpas(tbumpas3@gatech.edu), Chuck Cao (chuckcao@gatech.edu), and Matthew Truong(mtruong9@gatech.edu)
 for ISYE 6644 during the Spring 2025 semester.
 
 The repository contains functions for the following procedures:
@@ -29,7 +29,7 @@ The procedures and examples were validated to run properly using the recommended
 ## Structure
 The library consists of two folders:
 - **ranking_selection_procedures**: contains the .py procedure functions
-- **examples**: contains .py scripts** that contain examples of using each procedure. 
+- **examples**: contains .py scripts that contain examples of using each procedure. 
 ### ranking_selection_procedures
 Within the ranking_selection_procedures folder are the following files:
 - bernoulli.py: Contains the kiefer_wolfowitz_sequential_procedure() and rhinott_two_stage_procedure() functions.
